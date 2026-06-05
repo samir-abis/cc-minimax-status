@@ -12,20 +12,28 @@ Claude Code's `rate_limits` block on stdin doesn't expose the MiniMax 5h limit â
 
 ## Install
 
-**One-liner (recommended):**
+**`npx` (recommended for Node users):**
+
+```sh
+npx cc-minimax-status
+```
+
+That's it. The npm package bundles the statusline script, writes it to `~/.claude/statusline.sh`, and patches `~/.claude/settings.json` â€” no `curl` required.
+
+**One-liner shell installer (no Node required):**
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/samir-abis/cc-minimax-status/main/install.sh | bash
 ```
 
-The installer:
-- downloads `statusline.sh` to `~/.claude/statusline.sh` and `chmod +x` it
-- patches `~/.claude/settings.json` to add the `statusLine` block (with a timestamped backup of your existing settings)
-- verifies the result
+Both installers:
+- download / bundle `statusline.sh` to `~/.claude/statusline.sh` and `chmod +x` it
+- patch `~/.claude/settings.json` to add the `statusLine` block (with a timestamped backup of your existing settings)
+- verify the result
 
 **Restart Claude Code** after the install finishes.
 
-To uninstall later: re-run the same command with `--uninstall` appended.
+To uninstall later: re-run the same command with `--uninstall` appended (`npx cc-minimax-status --uninstall`).
 
 ### Manual install
 

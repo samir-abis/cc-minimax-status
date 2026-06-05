@@ -1,0 +1,37 @@
+{
+  "name": "cc-minimax-status",
+  "version": "0.1.0",
+  "description": "A Claude Code statusLine that shows your live MiniMax 5h quota + context-window usage.",
+  "bin": {
+    "cc-minimax-status": "bin/cc-minimax-status.js"
+  },
+  "files": [
+    "bin/",
+    "statusline.sh",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node bin/cc-minimax-status.js --help >/dev/null && echo OK"
+  },
+  "keywords": [
+    "claude-code",
+    "claude",
+    "statusline",
+    "status-line",
+    "minimax",
+    "minimax-api"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samir-abis/cc-minimax-status.git"
+  },
+  "homepage": "https://github.com/samir-abis/cc-minimax-status#readme",
+  "bugs": {
+    "url": "https://github.com/samir-abis/cc-minimax-status/issues"
+  }
+}

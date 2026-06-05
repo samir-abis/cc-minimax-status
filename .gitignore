@@ -9,5 +9,11 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Node / npm
+node_modules/
+*.tgz
+.npm/
+npm-debug.log*
+
 # Claude Code's project metadata
 .claude/
