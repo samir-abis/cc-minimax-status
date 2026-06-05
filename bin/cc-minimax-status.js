@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // cc-minimax-status — install/uninstall a Claude Code statusLine that shows
-// your live MiniMax 5h quota + context-window usage.
+// your live MiniMax 5h quota.
 //
 // Mirrors install.sh but uses Node's stdlib so it doesn't need `jq`.
 
@@ -21,6 +21,7 @@ const STATUSLINE_BLOCK = {
   type: 'command',
   command: '~/.claude/statusline.sh',
   padding: 2,
+  refreshInterval: 30,
 };
 
 // --- Tiny ANSI helpers (no deps) ---
@@ -54,7 +55,7 @@ Options:
   --help, -h     Show this help
 
 After install, restart Claude Code to see:
-  MiniMax: 100% / 5h (39m) | Ctx: 12%`);
+  MiniMax: 100% / 5h (39m)`);
   process.exit(0);
 }
 
@@ -144,7 +145,7 @@ function install() {
   console.log(`   ${bold('Next step:')} restart Claude Code to see the status line.`);
   console.log('   The line will look like:');
   console.log('');
-  console.log('     MiniMax: 100% / 5h (39m) | Ctx: 12%');
+  console.log('     MiniMax: 100% / 5h (39m)');
   console.log('');
   console.log('   Need to uninstall?  Re-run with --uninstall.');
 }

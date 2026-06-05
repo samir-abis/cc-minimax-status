@@ -18,7 +18,7 @@ RAW_BASE="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 CLAUDE_DIR="${HOME}/.claude"
 SCRIPT_PATH="${CLAUDE_DIR}/${SCRIPT_NAME}"
 SETTINGS_PATH="${CLAUDE_DIR}/settings.json"
-STATUSLINE_BLOCK='{"type":"command","command":"~/.claude/statusline.sh","padding":2}'
+STATUSLINE_BLOCK='{"type":"command","command":"~/.claude/statusline.sh","padding":2,"refreshInterval":30}'
 
 # --- Parse args ---
 FORCE=0
@@ -119,5 +119,5 @@ ok "Install complete."
 printf '\n'
 printf '   \033[1mNext step:\033[0m restart Claude Code to see the status line.\n'
 printf '   The line will look like:\n\n'
-printf '     MiniMax: 100%% / 5h (39m) | Ctx: 12%%\n\n'
+printf '     MiniMax: 100%% / 5h (39m)\n\n'
 printf '   Need to uninstall?  Re-run with --uninstall.\n'

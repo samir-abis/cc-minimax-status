@@ -1,14 +1,16 @@
 # cc-minimax-status
 
-A Claude Code [statusLine](https://docs.claude.com/en/statusline) script that shows your live **MiniMax 5h quota** and **context-window usage** on every render.
+A Claude Code [statusLine](https://docs.claude.com/en/statusline) script that shows your live **MiniMax 5h quota** on every render. Context-window usage is intentionally not shown — Claude Code already surfaces that.
 
 ```
-MiniMax: 100% / 5h (39m) | Ctx: 12%
+MiniMax: 100% / 5h (39m)
 ```
 
 ## Why
 
-Claude Code's `rate_limits` block on stdin doesn't expose the MiniMax 5h limit — only Anthropic's own. This script fetches the real 5h limit directly from MiniMax's public API (`/v1/token_plan/remains`) using the same API key you already have wired up as `ANTHROPIC_AUTH_TOKEN`, and combines it with the context-window percentage Claude Code computes locally.
+Claude Code's `rate_limits` block on stdin doesn't expose the MiniMax 5h limit — only Anthropic's own. This script fetches the real 5h limit directly from MiniMax's public API (`/v1/token_plan/remains`) using the same API key you already have wired up as `ANTHROPIC_AUTH_TOKEN`.
+
+Context-window usage is **not** in this line on purpose: Claude Code already shows it (the statusline row and a transient warning near 80%), so duplicating it would just be visual noise.
 
 ## Install
 
@@ -54,10 +56,13 @@ chmod +x ~/.claude/statusline.sh
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh",
-    "padding": 2
+    "padding": 2,
+    "refreshInterval": 30
   }
 }
 ```
+
+`refreshInterval` (in seconds, minimum 1) re-runs the script on a timer in addition to the normal event-driven renders, so the time-to-reset countdown `(Xh Ym)` visibly ticks even when you're idle and Claude Code isn't generating new output. The default of 30s strikes a balance between a live-feeling display and not hammering the MiniMax quota API; drop to `5`–`10` for a smoother tick, raise to `60`+ if you want to minimize API calls.
 
 **3. Restart Claude Code** so the `statusLine` config takes effect.
 
@@ -73,16 +78,13 @@ chmod +x ~/.claude/statusline.sh
 | Segment | Source | Notes |
 |---|---|---|
 | `MiniMax: X% / 5h (Ym)` | Public `GET /v1/token_plan/remains` with `Authorization: Bearer $ANTHROPIC_AUTH_TOKEN` | The 5h limit is reported as remaining-percent + time-to-reset. The script picks the most-exhausted model slot (typically `general`) and shows `100 - remaining_percent` for the used number. |
-| `Ctx: X%` | `context_window.used_percentage` from Claude Code's stdin JSON | Always available; doesn't require any network call. |
 
-Both numbers turn **green below 40%**, **yellow from 40–59%**, and **red at 60% or above**.
+The number turns **green below 40%**, **yellow from 40–59%**, and **red at 60% or above**.
 
 ## How it works
 
-1. Claude Code pipes a JSON blob describing the current session to the script on stdin.
-2. The script reads the context-window percentage out of that JSON.
-3. In parallel, the script does a `curl GET https://www.minimax.io/v1/token_plan/remains` with the bearer token. The endpoint is rate-limit-friendly (`--max-time 5`) and a failed call degrades to `n/a` without breaking the line.
-4. Both numbers are colorized and printed on a single line.
+1. The script does a `curl GET https://www.minimax.io/v1/token_plan/remains` with the bearer token. The endpoint is rate-limit-friendly (`--max-time 5`) and a failed call degrades to `n/a` without breaking the line.
+2. The result is colorized and printed on a single line.
 
 ## Known limitations
 

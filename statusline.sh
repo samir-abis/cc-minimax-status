@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
-# Claude Code statusLine: MiniMax 5h quota + context window usage.
+# Claude Code statusLine: MiniMax 5h quota.
 #
-# Reads the session JSON that Claude Code pipes to stdin and prints a single
-# colorized line. Fetches the 5h limit from the public /v1/token_plan/remains
-# endpoint using the same API key that's wired up for Claude Code.
+# Fetches the 5h limit from the public /v1/token_plan/remains endpoint using
+# the same API key that's wired up for Claude Code. Claude Code's own
+# statusline already surfaces context-window usage, so we don't duplicate it.
 #
-# Output: "MiniMax: 47% / 5h (1h 29m) | Ctx: 8%"
+# Output: "MiniMax: 47% / 5h (1h 29m)"
 
-# ---------- 1. Read stdin (Claude Code session JSON) ----------
-input=$(cat)
-
-# ---------- 2. Fetch 5h quota from the public token-plan endpoint ----------
+# ---------- 1. Fetch 5h quota from the public token-plan endpoint ----------
 quota_str="n/a"
 quota_pct=0
 
@@ -48,12 +45,7 @@ if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
   fi
 fi
 
-# ---------- 3. Context-window percentage from stdin ----------
-# `// 0` handles null (e.g. very first render before the first turn).
-# `floor` collapses 23.5 -> 23 so bash integer comparisons work.
-ctx_pct=$(printf '%s' "$input" | jq -r '.context_window.used_percentage // 0 | floor')
-
-# ---------- 4. Color the percentages by threshold ----------
+# ---------- 2. Color the percentage by threshold ----------
 #   <40  -> green,  <60 -> yellow,  >=60 -> red
 color_for() {
   local v=$1
@@ -70,8 +62,6 @@ if [[ "$quota_str" != "n/a" ]]; then
 else
   quota_str_colored="$quota_str"
 fi
-ctx_color=$(color_for "$ctx_pct")
 
-# ---------- 5. Final output ----------
-printf 'MiniMax: %s | Ctx: %s%d%%%s\n' \
-  "$quota_str_colored" "$ctx_color" "$ctx_pct" "$ansi_reset"
+# ---------- 3. Final output ----------
+printf 'MiniMax: %s\n' "$quota_str_colored"
