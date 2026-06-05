@@ -12,6 +12,25 @@ Claude Code's `rate_limits` block on stdin doesn't expose the MiniMax 5h limit â
 
 ## Install
 
+**One-liner (recommended):**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/samir-abis/cc-minimax-status/main/install.sh | bash
+```
+
+The installer:
+- downloads `statusline.sh` to `~/.claude/statusline.sh` and `chmod +x` it
+- patches `~/.claude/settings.json` to add the `statusLine` block (with a timestamped backup of your existing settings)
+- verifies the result
+
+**Restart Claude Code** after the install finishes.
+
+To uninstall later: re-run the same command with `--uninstall` appended.
+
+### Manual install
+
+If you'd rather not pipe to `bash`:
+
 **1. Copy the script somewhere on disk**
 
 ```sh
@@ -34,7 +53,12 @@ chmod +x ~/.claude/statusline.sh
 
 **3. Restart Claude Code** so the `statusLine` config takes effect.
 
-That's it. The script reads `$ANTHROPIC_AUTH_TOKEN` from the environment, which is the same MiniMax API key you already have configured for Claude Code. No new credentials, no cookies, no extra setup.
+### Requirements
+
+- `bash` (any modern version)
+- `curl`
+- `jq` (only the installer needs it; the statusline script itself just shells out to it)
+- The same MiniMax API key you already have configured as `ANTHROPIC_AUTH_TOKEN` for Claude Code â€” no new credentials.
 
 ## What it shows
 
