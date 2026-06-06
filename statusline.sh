@@ -6,62 +6,95 @@
 # statusline already surfaces context-window usage, so we don't duplicate it.
 #
 # Output: "MiniMax: 47% / 5h (1h 29m)"
+#
+# When sourced (not executed), the pure helpers below are exposed for tests;
+# when run directly, main() is invoked.
 
-# ---------- 1. Fetch 5h quota from the public token-plan endpoint ----------
-quota_str="n/a"
-quota_pct=0
+# ---------- pure helpers (safe to call from tests via `source`) ----------
 
-if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
-  response=$(curl -s --max-time 5 \
-    -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
-    -H "Content-Type: application/json" \
-    "https://www.minimax.io/v1/token_plan/remains" 2>/dev/null)
-
-  # Pick the model slot with the LOWEST remaining_percent — that's the active
-  # 5h limit (the "general" slot for chat/LLM usage; "video" is its own bucket
-  # and tends to report 100% remaining).
-  if echo "$response" | jq -e '.model_remains[0].current_interval_remaining_percent' >/dev/null 2>&1; then
-    entry=$(echo "$response" | jq '
-      .model_remains
-      | map(select(.current_interval_remaining_percent != null))
-      | min_by(.current_interval_remaining_percent)
-    ')
-
-    remaining_pct=$(echo "$entry" | jq '.current_interval_remaining_percent | floor')
-    quota_pct=$((100 - remaining_pct))
-    remains_ms=$(echo "$entry" | jq '.remains_time')
-
-    # ms -> "Xh Ym" / "Xh" / "Ym" / "0m"
-    total_min=$((remains_ms / 60000))
-    h=$((total_min / 60))
-    m=$((total_min % 60))
-    if   [[ $h -gt 0 && $m -gt 0 ]]; then reset_str="${h}h ${m}m"
-    elif [[ $h -gt 0 ]];              then reset_str="${h}h"
-    elif [[ $m -gt 0 ]];              then reset_str="${m}m"
-    else                                   reset_str="0m"
-    fi
-
-    quota_str="${quota_pct}% / 5h (${reset_str})"
+# Convert a duration in ms to "Xh Ym" / "Xh" / "Ym" / "0m". No trailing newline.
+ms_to_human() {
+  local ms=$1 total_min h m
+  total_min=$((ms / 60000))
+  h=$((total_min / 60))
+  m=$((total_min % 60))
+  if   [[ $h -gt 0 && $m -gt 0 ]]; then printf '%dh %dm' "$h" "$m"
+  elif [[ $h -gt 0 ]];              then printf '%dh' "$h"
+  elif [[ $m -gt 0 ]];              then printf '%dm' "$m"
+  else                                   printf '0m'
   fi
-fi
+}
 
-# ---------- 2. Color the percentage by threshold ----------
+# Return an ANSI color escape for a used% value.
 #   <40  -> green,  <60 -> yellow,  >=60 -> red
 color_for() {
   local v=$1
-  if   [[ $v -lt 40 ]]; then printf '\033[32m'   # green
-  elif [[ $v -lt 60 ]]; then printf '\033[33m'   # yellow
-  else                        printf '\033[31m'   # red
+  if   [[ $v -lt 40 ]]; then printf '\033[32m'
+  elif [[ $v -lt 60 ]]; then printf '\033[33m'
+  else                        printf '\033[31m'
   fi
 }
-ansi_reset=$'\033[0m'
 
-if [[ "$quota_str" != "n/a" ]]; then
-  q_color=$(color_for "$quota_pct")
-  quota_str_colored="${q_color}${quota_str}${ansi_reset}"
-else
-  quota_str_colored="$quota_str"
+# Pick the model slot with the LOWEST remaining_percent (skip nulls).
+# Reads JSON on stdin. Returns non-zero if no usable slot.
+pick_best_slot() {
+  jq -e '
+    .model_remains
+    | map(select(.current_interval_remaining_percent != null))
+    | min_by(.current_interval_remaining_percent)
+  '
+}
+
+# Format a single model-slot entry into "X% / 5h (Ym)". No trailing newline.
+format_slot() {
+  local entry=$1 remaining_pct quota_pct remains_ms reset_str
+  remaining_pct=$(printf '%s' "$entry" | jq '.current_interval_remaining_percent | floor')
+  quota_pct=$((100 - remaining_pct))
+  remains_ms=$(printf '%s' "$entry" | jq '.remains_time')
+  reset_str=$(ms_to_human "$remains_ms")
+  printf '%s%% / 5h (%s)' "$quota_pct" "$reset_str"
+}
+
+# Format an API response into the status string. No trailing newline.
+# Echoes "n/a" on any failure (no usable slot, malformed JSON, etc.).
+format_status() {
+  local json=$1 entry
+  if entry=$(printf '%s' "$json" | pick_best_slot); then
+    format_slot "$entry"
+  else
+    printf 'n/a'
+  fi
+}
+
+# ---------- main: runs only when this file is executed directly ----------
+
+main() {
+  local quota_str="n/a" quota_pct=0
+
+  if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
+    local response entry
+    response=$(curl -s --max-time 5 \
+      -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+      -H "Content-Type: application/json" \
+      "https://www.minimax.io/v1/token_plan/remains" 2>/dev/null) || true
+
+    if [[ -n "$response" ]] && entry=$(printf '%s' "$response" | pick_best_slot); then
+      quota_str=$(format_slot "$entry")
+      quota_pct=$((100 - $(printf '%s' "$entry" | jq '.current_interval_remaining_percent | floor')))
+    fi
+  fi
+
+  local ansi_reset=$'\033[0m'
+  if [[ "$quota_str" != "n/a" ]]; then
+    local q_color
+    q_color=$(color_for "$quota_pct")
+    printf 'MiniMax: %s%s%s\n' "$q_color" "$quota_str" "$ansi_reset"
+  else
+    printf 'MiniMax: %s\n' "$quota_str"
+  fi
+}
+
+# When sourced (e.g. by bats), do not run main. When executed, run it.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
 fi
-
-# ---------- 3. Final output ----------
-printf 'MiniMax: %s\n' "$quota_str_colored"

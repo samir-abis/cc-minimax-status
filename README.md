@@ -86,6 +86,23 @@ The number turns **green below 40%**, **yellow from 40–59%**, and **red at 60%
 1. The script does a `curl GET https://www.minimax.io/v1/token_plan/remains` with the bearer token. The endpoint is rate-limit-friendly (`--max-time 5`) and a failed call degrades to `n/a` without breaking the line.
 2. The result is colorized and printed on a single line.
 
+## Tests
+
+Pure-logic unit tests live in `test/statusline.bats` and run with [bats-core](https://github.com/bats-core/bats-core):
+
+```sh
+npm test
+```
+
+(equivalent to `bats test/`). Install bats-core first if you don't have it:
+
+```sh
+brew install bats-core          # macOS
+sudo apt install bats           # Debian / Ubuntu
+```
+
+The test suite covers the time-formatting, color-thresholds, model-slot selection, the `n/a` fallbacks for malformed / empty responses, and a sanity check that the script still points at the `minimax.io` token-plan endpoint.
+
 ## Known limitations
 
 - **Credit balance is not shown.** The public API exposes percent + reset time for the 5h and weekly windows, but the credit-pool number (e.g. "19,944 credits") is in a separate dashboard store that's only accessible with a session cookie. If you want credits in the line, you'd need a cookie-based refresh script (out of scope for this project).

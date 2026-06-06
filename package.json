@@ -12,7 +12,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node bin/cc-minimax-status.js --help >/dev/null && echo OK"
+    "test": "bats test/"
   },
   "keywords": [
     "claude-code",
