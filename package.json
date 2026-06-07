@@ -28,7 +28,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samir-abis/cc-minimax-status.git"
+    "url": "git+https://github.com/samir-abis/cc-minimax-status.git"
   },
   "homepage": "https://github.com/samir-abis/cc-minimax-status#readme",
   "bugs": {
