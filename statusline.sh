@@ -66,15 +66,31 @@ format_status() {
   fi
 }
 
+# Pick the bearer token from the env, in priority order:
+#   1. $MINIMAX_TOKEN_VAR is set -> read ${!MINIMAX_TOKEN_VAR}
+#      (lets a wrapper like the opencode plugin route to any name)
+#   2. else $MINIMAX_API_KEY  (recommended for opencode users)
+#   3. else $ANTHROPIC_AUTH_TOKEN  (Claude Code convention, back-compat)
+# Echoes empty string if nothing is set.
+pick_token() {
+  if [[ -n "${MINIMAX_TOKEN_VAR:-}" ]]; then
+    printf '%s' "${!MINIMAX_TOKEN_VAR:-}"
+  else
+    printf '%s' "${MINIMAX_API_KEY:-${ANTHROPIC_AUTH_TOKEN:-}}"
+  fi
+}
+
 # ---------- main: runs only when this file is executed directly ----------
 
 main() {
   local quota_str="n/a" quota_pct=0
+  local token
+  token=$(pick_token)
 
-  if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
+  if [[ -n "$token" ]]; then
     local response entry
     response=$(curl -s --max-time 5 \
-      -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+      -H "Authorization: Bearer $token" \
       -H "Content-Type: application/json" \
       "https://www.minimax.io/v1/token_plan/remains" 2>/dev/null) || true
 

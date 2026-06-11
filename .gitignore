@@ -17,3 +17,6 @@ npm-debug.log*
 
 # Claude Code's project metadata
 .claude/
+
+# Opencode source (cloned locally as a reference for plugin dev)
+opencode-source/

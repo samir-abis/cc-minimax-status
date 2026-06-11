@@ -1,13 +1,14 @@
 {
   "name": "cc-minimax-status",
-  "version": "0.2.1",
-  "description": "A Claude Code statusLine that shows your live MiniMax 5h quota.",
+  "version": "0.4.0",
+  "description": "A statusline (Claude Code) + sidebar TUI plugin (/minimax command) for opencode that shows your live MiniMax 5h quota.",
   "bin": {
     "cc-minimax-status": "bin/cc-minimax-status.js"
   },
   "files": [
     "bin/",
     "statusline.sh",
+    "opencode/",
     "README.md",
     "LICENSE"
   ],
@@ -17,8 +18,11 @@
   "keywords": [
     "claude-code",
     "claude",
+    "opencode",
     "statusline",
     "status-line",
+    "toast",
+    "plugin",
     "minimax",
     "minimax-api"
   ],
