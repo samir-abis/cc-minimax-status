@@ -113,6 +113,12 @@ npx cc-minimax-status --opencode-only   # or: --claude-only
 curl -fsSL https://raw.githubusercontent.com/samir-abis/cc-minimax-status/main/install.sh | bash -s -- --opencode-only
 ```
 
+Re-running the installer auto-upgrades `~/.claude/statusline.sh` to the latest
+version (the script is project-owned; outdated copies are detected via a
+`STATUSLINE_VERSION` marker and replaced on each install). The opencode
+plugin and `/minimax` command are still skipped when present — pass
+`--force` (or `-f`) to overwrite those too.
+
 The opencode plugin reads the script from `~/.claude/statusline.sh` (so even with `--opencode-only` we still drop a copy of the script there). To point it at a different script, set `OPENCODE_MINIMAX_SCRIPT=/path/to/script.sh` before starting opencode. Other env knobs:
 
 | Env var | Default | Purpose |

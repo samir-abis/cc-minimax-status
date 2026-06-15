@@ -296,6 +296,58 @@ PLUGIN="$BATS_TEST_DIRNAME/../opencode/minimax-status.tsx"
   grep -q 'opencode\.ai/tui\.json' "$BATS_TEST_DIRNAME/../install.sh"
 }
 
+# ---------- version constant (drives the installer's auto-upgrade) ----------
+
+@test "statusline.sh declares STATUSLINE_VERSION as a positive integer" {
+  grep -qE '^STATUSLINE_VERSION=[0-9]+' "$SCRIPT"
+  [ "$(grep -oE '^STATUSLINE_VERSION=[0-9]+' "$SCRIPT" | head -1 | grep -oE '[0-9]+$')" -gt 0 ]
+}
+
+@test "bash installer pins the same EXPECTED_STATUSLINE_VERSION" {
+  # If you bump STATUSLINE_VERSION in statusline.sh, bump
+  # EXPECTED_STATUSLINE_VERSION in install.sh in the same commit.
+  installed=$(grep -oE '^STATUSLINE_VERSION=[0-9]+' "$SCRIPT" | head -1 | grep -oE '[0-9]+$')
+  expected=$(grep -oE '^EXPECTED_STATUSLINE_VERSION=[0-9]+' "$BATS_TEST_DIRNAME/../install.sh" | head -1 | grep -oE '[0-9]+$')
+  [ "$installed" = "$expected" ]
+}
+
+@test "JS installer pins the same EXPECTED_STATUSLINE_VERSION" {
+  installed=$(grep -oE '^STATUSLINE_VERSION=[0-9]+' "$SCRIPT" | head -1 | grep -oE '[0-9]+$')
+  expected=$(grep -oE "EXPECTED_STATUSLINE_VERSION = [0-9]+" "$BATS_TEST_DIRNAME/../bin/cc-minimax-status.js" | head -1 | grep -oE '[0-9]+$')
+  [ "$installed" = "$expected" ]
+}
+
+# ---------- installer: auto-upgrade of outdated statusline.sh ----------
+#
+# The script is project-owned: when we ship a behavior change, the installer
+# must overwrite outdated copies on disk. A plain "skip if file exists"
+# guard silently strands users on an old script (see issue: n/a in sidebar
+# with key exported as MINIMAX_API_KEY, the script only knows
+# ANTHROPIC_AUTH_TOKEN). These tests pin the new behavior.
+
+@test "bash installer no longer has the old 'skip if file exists' guard for statusline.sh" {
+  # The old guard read: if [[ -f "$SCRIPT_PATH" && $FORCE -eq 0 ]]; then
+  #                  warn "$SCRIPT_PATH already exists; skipping download. Use --force ..."
+  ! grep -qE '\$SCRIPT_PATH already exists; skipping download' "$BATS_TEST_DIRNAME/../install.sh"
+  ! grep -qE 'if \[\[ -f "\$SCRIPT_PATH" && \$FORCE -eq 0 \]\]' "$BATS_TEST_DIRNAME/../install.sh"
+}
+
+@test "bash installer branches on STATUSLINE_VERSION, not on file existence" {
+  grep -qE 'EXPECTED_STATUSLINE_VERSION' "$BATS_TEST_DIRNAME/../install.sh"
+  grep -qE 'installed_statusline_version' "$BATS_TEST_DIRNAME/../install.sh"
+}
+
+@test "JS installer no longer has the old 'skip if file exists' guard for statusline.sh" {
+  # Same guard, in JS form: fs.existsSync(SCRIPT_PATH) && !FORCE → warn.
+  ! grep -qE 'SCRIPT_PATH.*already exists; skipping copy' "$BATS_TEST_DIRNAME/../bin/cc-minimax-status.js"
+  ! grep -qE 'fs\.existsSync\(SCRIPT_PATH\) && !FORCE' "$BATS_TEST_DIRNAME/../bin/cc-minimax-status.js"
+}
+
+@test "JS installer reads installed STATUSLINE_VERSION before deciding" {
+  grep -qE 'installedStatuslineVersion' "$BATS_TEST_DIRNAME/../bin/cc-minimax-status.js"
+  grep -qE 'EXPECTED_STATUSLINE_VERSION' "$BATS_TEST_DIRNAME/../bin/cc-minimax-status.js"
+}
+
 # ---------- /minimax slash command ----------
 
 @test "/minimax slash command file is present" {

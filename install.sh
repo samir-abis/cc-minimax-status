@@ -22,6 +22,10 @@ PLUGIN_NAME="minimax-status.tsx"
 COMMAND_NAME="minimax.md"
 RAW_BASE="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 
+# Must match STATUSLINE_VERSION in statusline.sh. Bump together when the
+# script's behavior changes (env-var lookup, API call, output format).
+EXPECTED_STATUSLINE_VERSION=2
+
 CLAUDE_DIR="${HOME}/.claude"
 SCRIPT_PATH="${CLAUDE_DIR}/${SCRIPT_NAME}"
 SETTINGS_PATH="${CLAUDE_DIR}/settings.json"
@@ -71,6 +75,15 @@ log()  { printf '\033[36m==>\033[0m %s\n' "$*"; }
 ok()   { printf '\033[32m ✓\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m !\033[0m %s\n' "$*"; }
 err()  { printf '\033[31m ✗\033[0m %s\n' "$*" >&2; }
+
+# Read STATUSLINE_VERSION from a script on disk. Echoes 0 if the file is
+# missing or doesn't carry the marker (i.e. a pre-versioning install).
+installed_statusline_version() {
+  local f=$1
+  if [[ ! -f "$f" ]]; then printf 0; return; fi
+  grep -oE '^STATUSLINE_VERSION=[0-9]+' "$f" 2>/dev/null \
+    | head -1 | grep -oE '[0-9]+$' || printf 0
+}
 
 # --- Pre-flight: jq is required (we use it to safely edit settings.json) ---
 if ! command -v jq >/dev/null 2>&1; then
@@ -190,15 +203,33 @@ log "Installing cc-minimax-status"
 #    need a place for statusline.sh so the opencode plugin can find it)
 mkdir -p "$CLAUDE_DIR"
 
-# 2. Download the statusline script (atomic write via .tmp + mv)
-if [[ -f "$SCRIPT_PATH" && $FORCE -eq 0 ]]; then
-  warn "$SCRIPT_PATH already exists; skipping download. Use --force to overwrite."
+# 2. Download the statusline script (atomic write via .tmp + mv).
+#    The script is project-owned: outdated copies are auto-upgraded so
+#    behavior changes (e.g. a new env-var fallback) land on every device
+#    without the user having to remember to re-install. Idempotent for
+#    the same version. --force re-downloads even at the current version.
+INSTALLED_VERSION=$(installed_statusline_version "$SCRIPT_PATH")
+if [[ $FORCE -eq 1 ]]; then
+  log "Force-overwriting $SCRIPT_PATH"
+elif [[ $INSTALLED_VERSION -ge $EXPECTED_STATUSLINE_VERSION ]]; then
+  log "$SCRIPT_PATH is at v$INSTALLED_VERSION (>= v$EXPECTED_STATUSLINE_VERSION); skipping."
 else
+  if [[ $INSTALLED_VERSION -eq 0 ]]; then
+    log "Installing $SCRIPT_PATH"
+  else
+    log "Upgrading $SCRIPT_PATH: v$INSTALLED_VERSION -> v$EXPECTED_STATUSLINE_VERSION"
+  fi
+fi
+if [[ $FORCE -eq 1 || $INSTALLED_VERSION -lt $EXPECTED_STATUSLINE_VERSION ]]; then
   if ! download "${RAW_BASE}/${SCRIPT_NAME}" "$SCRIPT_PATH" "statusline.sh"; then
     exit 1
   fi
   chmod +x "$SCRIPT_PATH"
-  ok "Installed $SCRIPT_NAME -> $SCRIPT_PATH"
+  if [[ $INSTALLED_VERSION -eq 0 ]]; then
+    ok "Installed $SCRIPT_NAME -> $SCRIPT_PATH"
+  else
+    ok "Upgraded $SCRIPT_NAME -> v$EXPECTED_STATUSLINE_VERSION (was v$INSTALLED_VERSION)"
+  fi
 fi
 
 # 3. Claude Code: patch settings.json

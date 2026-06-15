@@ -10,6 +10,11 @@
 # When sourced (not executed), the pure helpers below are exposed for tests;
 # when run directly, main() is invoked.
 
+# Bump this when the script's behavior (env-var lookup, API call, output
+# format) changes in a way the installer needs to roll out. The installer
+# reads it to auto-upgrade outdated copies on disk; do not remove.
+STATUSLINE_VERSION=2
+
 # ---------- pure helpers (safe to call from tests via `source`) ----------
 
 # Convert a duration in ms to "Xh Ym" / "Xh" / "Ym" / "0m". No trailing newline.

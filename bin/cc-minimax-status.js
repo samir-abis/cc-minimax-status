@@ -29,6 +29,10 @@ const BUNDLED_SCRIPT = path.join(__dirname, '..', 'statusline.sh');
 const BUNDLED_PLUGIN = path.join(__dirname, '..', 'opencode', 'minimax-status.tsx');
 const BUNDLED_COMMAND = path.join(__dirname, '..', 'opencode', 'commands', 'minimax.md');
 
+// Must match STATUSLINE_VERSION in statusline.sh. Bump together when the
+// script's behavior changes (env-var lookup, API call, output format).
+const EXPECTED_STATUSLINE_VERSION = 2;
+
 const STATUSLINE_BLOCK = {
   type: 'command',
   command: '~/.claude/statusline.sh',
@@ -110,19 +114,42 @@ function writeJsonAtomic(p, value) {
   }
 }
 
+// Read STATUSLINE_VERSION from a script on disk. Returns 0 if missing or
+// pre-versioning (no marker). Matches the bash helper in install.sh.
+function installedStatuslineVersion(p) {
+  if (!fs.existsSync(p)) return 0;
+  const m = fs.readFileSync(p, 'utf8').match(/^STATUSLINE_VERSION=(\d+)/m);
+  return m ? Number(m[1]) : 0;
+}
+
 function installScript() {
-  if (fs.existsSync(SCRIPT_PATH) && !FORCE) {
-    warn(`${SCRIPT_PATH} already exists; skipping copy. Use --force to overwrite.`);
-    return;
-  }
   if (!fs.existsSync(BUNDLED_SCRIPT)) {
     err(`Bundled script not found at ${BUNDLED_SCRIPT}.`);
     err('The npm package may be broken — try reinstalling.');
     process.exit(1);
   }
+  // The script is project-owned: outdated copies are auto-upgraded so
+  // behavior changes (e.g. a new env-var fallback) land on every device
+  // without the user having to remember to re-install. Idempotent for
+  // the same version. --force re-installs even at the current version.
+  const installed = installedStatuslineVersion(SCRIPT_PATH);
+  if (FORCE) {
+    log(`Force-overwriting ${SCRIPT_PATH}`);
+  } else if (installed >= EXPECTED_STATUSLINE_VERSION) {
+    log(`${SCRIPT_PATH} is at v${installed} (>= v${EXPECTED_STATUSLINE_VERSION}); skipping.`);
+    return;
+  } else if (installed === 0) {
+    log(`Installing ${SCRIPT_PATH}`);
+  } else {
+    log(`Upgrading ${SCRIPT_PATH}: v${installed} -> v${EXPECTED_STATUSLINE_VERSION}`);
+  }
   fs.copyFileSync(BUNDLED_SCRIPT, SCRIPT_PATH);
   fs.chmodSync(SCRIPT_PATH, 0o755);
-  ok(`Installed statusline.sh -> ${SCRIPT_PATH}`);
+  if (installed === 0) {
+    ok(`Installed statusline.sh -> ${SCRIPT_PATH}`);
+  } else {
+    ok(`Upgraded statusline.sh -> v${EXPECTED_STATUSLINE_VERSION} (was v${installed})`);
+  }
 }
 
 function installClaudeSettings() {
